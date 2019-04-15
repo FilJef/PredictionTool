@@ -1,7 +1,7 @@
 import pandas
 import numpy
 import Generic_parser
-
+from numpy import array
 def formatData(StockData, gcloudcon):
 
     StockData = StockData.values
@@ -57,3 +57,28 @@ def averageArray(array):
     nelem = float(nrows)
     results = [s / nelem for s in results]
     return results
+
+def createLSTMarrays(x, y):
+
+    x_train = []
+    y_train = []
+    x_test =[]
+    y_test = []
+    count = 0
+    while count + 50 < len(x):
+        xhold = []
+        yhold = []
+        for i in range(50):
+            xhold.append(x[i + count])
+            yhold.append(y[i + count])
+
+        count += 50
+        if count + 50 < len(x):
+            x_train.append(xhold)
+            y_train.append(yhold)
+        else:
+            x_test.append(xhold)
+            y_test.append(yhold)
+
+    return array(x_train), array(y_train), array(x_test), array(y_test)
+        

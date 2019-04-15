@@ -69,10 +69,11 @@ def SVR_gen(date, price):
     return
 
 
-def ML(date, price):
+def ML(date, price, features):
+    x_train, y_train, x_test, y_test = ArticleHelper.createLSTMarrays(date, price)
 
     model = Sequential()
-    model.add(LSTM(units=len(date[0]),  input_shape=(len(date), len(date[0]))))
+    model.add(LSTM(units=features,  input_shape=(50, features), return_sequences=True))
     model.add(Dense(units=len(date[0])))
     model.add(Dense(units=1))
 
@@ -81,19 +82,9 @@ def ML(date, price):
               metrics=['accuracy'])
 
 
-    date = date.reshape(1, len(date), len(date[0]))
-    price = price.flatten()
-    price = price.reshape(1, len(price))
-
-    print(model.input_shape)
-    print(date.shape)
-    print(model.output_shape)
-    print(price.shape)
-    model.summary()
-    model.fit(date, price)
-
-    loss_and_metrics = model.evaluate(date, price, batch_size=128)
-    print(loss_and_metrics)
+    model.fit(x_train,y_train)
+    
+    print(model.evaluate(x_test))
 
 gcloudcon = pymysql.connect(host='127.0.0.1',
                             database='store',
@@ -114,15 +105,15 @@ date, price = ArticleHelper.formatData(StockData, gcloudcon)
 hold = date[:,0]
 hold = hold.reshape(-1, 1)
 print("Linear regression based off close prices")
-#value = linear(hold, price)
+linear(hold, price)
 print("Linear regression close prices and news articles")
-#value = linear(date, price)
+linear(date, price)
 print("SVR based off close prices")
-#value = SVR_gen(hold, price)
+SVR_gen(hold, price)
 print("SVR close prices and news articles")
-#value = SVR_gen(date, price)
+SVR_gen(date, price)
 print("Neural network based off close prices")
-ML(hold, price)
+ML(hold, price, 1)
 print("Neural network based off close prices and news articles")
-ML(date, price)
+ML(date, price, 31)
 
