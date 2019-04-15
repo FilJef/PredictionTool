@@ -15,6 +15,22 @@ import pandas
 import ArticleHelper
 import numpy
 
+def linear(date, price):
+    lin = LinearRegression()
+    lin.fit(date, price)
+
+    plt.plot(date[:,0], price, label='real values')
+    plt.plot(lin.predict(date), label='linear regression')
+    #plt.show()
+
+    kfold = model_selection.KFold(n_splits=10)
+    results = model_selection.cross_val_score(lin, date, price, cv=kfold, scoring='neg_mean_absolute_error')
+    print("Lin MAE: {0} ({1})".format(results.mean(), results.std()))
+    results = model_selection.cross_val_score(lin, date, price, cv=kfold, scoring='neg_mean_squared_error')
+    print("Lin MSE: {0} ({1})".format(results.mean(), results.std()))
+    results = model_selection.cross_val_score(lin, date, price, cv=kfold, scoring='r2')
+    print("Lin R^2: {0} ({1})".format(results.mean(), results.std()))
+
 def SVR_gen(date, price):
 
     rbfSVR = SVR(kernel='rbf', C=1e3, gamma=0.1)
@@ -39,7 +55,7 @@ def SVR_gen(date, price):
         plt.ylabel('Price')
 
         plt.legend()
-    #     #plt.show()
+        #plt.show()
 
     #rbfSVR.fit(date, price)
     kfold = model_selection.KFold(n_splits=10)
@@ -54,8 +70,11 @@ def SVR_gen(date, price):
 
 
 def ML(date, price):
+
     model = Sequential()
     model.add(LSTM(units=len(date[0]),  input_shape=(len(date), len(date[0]))))
+    model.add(Dense(units=len(date[0])))
+    model.add(Dense(units=1))
 
     model.compile(loss='mse',
               optimizer='adam',
@@ -70,7 +89,7 @@ def ML(date, price):
     print(date.shape)
     print(model.output_shape)
     print(price.shape)
-
+    model.summary()
     model.fit(date, price)
 
     loss_and_metrics = model.evaluate(date, price, batch_size=128)
@@ -94,12 +113,16 @@ date, price = ArticleHelper.formatData(StockData, gcloudcon)
 #Just dates and price
 hold = date[:,0]
 hold = hold.reshape(-1, 1)
+print("Linear regression based off close prices")
+#value = linear(hold, price)
+print("Linear regression close prices and news articles")
+#value = linear(date, price)
 print("SVR based off close prices")
 #value = SVR_gen(hold, price)
 print("SVR close prices and news articles")
 #value = SVR_gen(date, price)
 print("Neural network based off close prices")
-#ML(hold, price)
+ML(hold, price)
 print("Neural network based off close prices and news articles")
 ML(date, price)
 
