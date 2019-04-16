@@ -2,46 +2,83 @@ import pandas
 import numpy
 import Generic_parser
 from numpy import array
-def formatData(StockData, gcloudcon):
+from sklearn.preprocessing import MinMaxScaler
 
-    StockData = StockData.values
-    x = [0] * 31
-    y = StockData[0, 1]
 
-    for n in range(1, len(StockData) - 1):
-        NewsArticles = pandas.read_sql_query(
-            "SELECT * FROM articles WHERE date >= '{0}' AND date < '{1}'".format(StockData[n, 0], StockData[n + 1, 0]),
-            con=gcloudcon)
-        NewsArticles = NewsArticles.values
+def formatData(StockData, gcloudcon, getArticles):
 
-        date = n
+    flatStockData = StockData.values
+
+    x = None
+
+    if getArticles is True:
+        x = [0] * 31
+    else:
+        x = [0] * 1
+
+    y = [0] * 1
+
+    for n in range(0, len(StockData) - 1):
 
         LMheadline = []
         LMarticle = []
         isArticles = False
+        
         # Sentiment of the news articles
-        for i in range(len(NewsArticles)):
-            isArticles = True
-            LMheadline.append(Generic_parser.get_data(NewsArticles[i, 1].upper()))
+        if getArticles is True:
+            query = "SELECT * FROM articles WHERE date >= '{0}' AND date < '{1}'"\
+                .format(flatStockData[n, 0], flatStockData[n + 1, 0])
+            NewsArticles = pandas.read_sql_query(query, con=gcloudcon)
+            NewsArticles = NewsArticles.values
 
-            # Check there is an article body, is not just 0 it
-            if NewsArticles[i, 2] is not "":
-                LMarticle.append(Generic_parser.get_data(NewsArticles[i, 2].upper()))
-            else:
-                LMarticle.append([0] * 17)
+            for i in range(len(NewsArticles)):
+                isArticles = True
+                LMheadline.append(Generic_parser.get_data(NewsArticles[i, 1].upper()))
 
+                # Check there is an article body, is not just 0 it
+                if NewsArticles[i, 2] is not "":
+                    LMarticle.append(Generic_parser.get_data(NewsArticles[i, 2].upper()))
+                else:
+                    LMarticle.append([0] * 17)
+
+        data = None
+        
+        #append sentiment values to price
         if isArticles is True:
             LMheadline = averageArray(LMheadline)
             LMarticle = averageArray(LMarticle)
             LM = LMheadline[2:len(LMheadline)] + LMarticle[2:len(LMarticle)]
-            date = [date] + LM
-            x = numpy.vstack((x, date))
+            data = [flatStockData[n, 4]] + LM
+        elif getArticles is False:
+            data = flatStockData[n, 4]
         else:
-            date = [date] + ([0] * 30)
-            x = numpy.vstack((x, date))
+            data = [flatStockData[n, 4]] + ([0] * 30)
 
-        y = numpy.vstack((y, StockData[n, 1]))
+        x = numpy.vstack((x, data))
+        y = numpy.vstack((y, flatStockData[n + 1, 4]))
+
+    # remove the null rows we instantiated at the start
+    x = numpy.delete(x, (0), axis=0)
+    y = numpy.delete(y, (0), axis=0)
+
+    x, y = createTimeseries(x, y, 5)
+
     return x, y
+
+
+def createTimeseries(inX, inY, lookback):
+    x = []
+    y = []
+
+    for i in range(lookback, len(inX)):
+        hold = []
+        for j in range(lookback):
+            hold = numpy.append(hold, (inX[i - j]))
+
+        x.append(hold)
+        y.append(inY[i])
+
+    return array(x), array(y).flatten()
 
 # Found on github
 def averageArray(array):
@@ -58,11 +95,12 @@ def averageArray(array):
     results = [s / nelem for s in results]
     return results
 
+
 def createLSTMarrays(x, y):
 
     x_train = []
     y_train = []
-    x_test =[]
+    x_test = []
     y_test = []
     count = 0
     while count + 50 < len(x):
