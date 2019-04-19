@@ -5,7 +5,19 @@ from numpy import array
 from sklearn.preprocessing import MinMaxScaler
 
 
-def formatData(StockData, gcloudcon, getArticles):
+def scaleDataset(X_train, y_train, X_test, y_test):
+    scaler = MinMaxScaler(feature_range=(-1, 1))
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+    y_train = scaler.fit_transform(y_train.reshape(-1, 1))
+    y_test = scaler.transform(y_test.reshape(-1, 1))
+
+    y_train = y_train.flatten()
+    y_test = y_test.flatten()
+    
+    return X_train, y_train, X_test, y_test
+
+def formatData(StockData, gcloudcon, getArticles, lookback):
 
     flatStockData = StockData.values
 
@@ -56,6 +68,7 @@ def formatData(StockData, gcloudcon, getArticles):
 
         x = numpy.vstack((x, data))
         y = numpy.vstack((y, flatStockData[n + 1, 4]))
+
 
     # remove the null rows we instantiated at the start
     x = numpy.delete(x, (0), axis=0)
