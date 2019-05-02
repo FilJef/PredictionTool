@@ -3,6 +3,7 @@ import numpy
 import Generic_parser
 from numpy import array
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import Imputer
 
 
 def scaleDataset(X_train, y_train, X_test, y_test):
@@ -11,11 +12,53 @@ def scaleDataset(X_train, y_train, X_test, y_test):
     X_test = scaler.transform(X_test)
     y_train = scaler.fit_transform(y_train.reshape(-1, 1))
     y_test = scaler.transform(y_test.reshape(-1, 1))
+    
+    missingImputer(X_train, X_test)
 
     y_train = y_train.flatten()
     y_test = y_test.flatten()
     
     return X_train, y_train, X_test, y_test
+
+
+def missingImputer(X_train, X_test):
+    # fill missing values with mean
+    X_train = pandas.DataFrame(X_train)
+    X_train = X_train.replace(-1, numpy.NAN)
+    X_train = X_train.values
+
+    X_test = pandas.DataFrame(X_test)
+    X_test = X_test.replace(-1, numpy.NAN)
+    X_test = X_test.values
+
+    imputer = Imputer()
+    X_train = imputer.fit_transform(X_train)
+    X_test = imputer.fit_transform(X_test)
+
+    return X_train, X_test
+
+
+def missingMean(X_train, X_test):
+    # fill missing values with mean
+    X_train = pandas.DataFrame(X_train)
+    X_train = X_train.replace(-1, numpy.NAN)
+    X_train.fillna(X_train.mean, inplace=True)
+    X_train = X_train.values
+
+    X_test = pandas.DataFrame(X_test)
+    X_test = X_test.replace(-1, numpy.NAN)
+    X_test.fillna(X_test.mean, inplace=True)
+    X_test = X_test.values
+    
+    return X_train, X_test
+
+
+def scaleKfold(x, y):
+    scaler = MinMaxScaler(feature_range=(-1, 1))
+    x = scaler.fit_transform(x)
+    y = scaler.fit_transform(y)
+    return x, y
+
 
 def formatData(StockData, gcloudcon, getArticles, lookback):
 
@@ -74,7 +117,7 @@ def formatData(StockData, gcloudcon, getArticles, lookback):
     x = numpy.delete(x, (0), axis=0)
     y = numpy.delete(y, (0), axis=0)
 
-    x, y = createTimeseries(x, y, 5)
+    x, y = createTimeseries(x, y, lookback)
 
     return x, y
 
@@ -132,4 +175,3 @@ def createLSTMarrays(x, y):
             y_test.append(yhold)
 
     return array(x_train), array(y_train), array(x_test), array(y_test)
-        
